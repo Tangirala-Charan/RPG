@@ -3,122 +3,219 @@ from classes.magic import Offensive_Spell
 from classes.inventory import Item
 import random
 
-# Data about spells
-Fire = Offensive_Spell('FIRE', 10, 60)
-Tornado = Offensive_Spell('TORNADO', 9, 45)
-Thunder = Offensive_Spell('THUNDER', 12, 75)
 
-magic = [Fire, Tornado, Thunder]
+# Data about spells
+Fire = Offensive_Spell('Fire', 10, 60)
+Tornado = Offensive_Spell('Tornado', 9, 45)
+Thunder = Offensive_Spell('Thunder', 12, 75)
+Quake = Offensive_Spell('Earthquake', 16, 95)
+
+magic = [Fire, Tornado, Thunder, Quake]
+
 
 # Inventory Data
-Dagger = Item('Weapon', 'Dagger', 'deals 100 HP damage', 100)
+Dagger = Item('Dagger', 'deals 100 HP damage', 100, 3)
+Grenade = Item('Grenade', 'deals 200 HP damage', 200, 2)
+
+Weapons = [Dagger, Grenade]
+
+Meed = Item('Meed', 'restores a small amount of HP', 50, 5)
+Elixir = Item('Elixir', 'restores a considerable amount of HP', 100, 3)
+Medkit = Item('Cure-all', 'restores HP to max', 10_000, 1)
+#Boost = Potion('Boost', 'increases Attack by 50%', 1.5, 1)
+
+Potions = [Meed, Elixir, Medkit]
+
+# Need to change Items Structure.
+# Hard to assign item number
+Items = {'Weapons': Weapons, 'Potions': Potions}  # Add Boost later
+
+weapons_num = len(Weapons)
+items_num = weapons_num + len(Potions)
 
 
 # Defining the player and enemy stats
-Player = character(520, 70, 60, 24, magic)
-Enemy = character(1100, 80, 35, 30, magic )
+
+P1 = character('Percy', 520, 70, 60, 24, magic[:], Items)
+P2 = character('Jason', 600, 50, 80, 18, magic[1:], Items)
+P3 = character('Grover', 900, 55, 40, 20, magic[1:3], Items)
+
+Players = [P1, P2, P3]
+
+E1 = character('Kronos', 1100, 80, 35, 30, magic, {})
+E2 = character('Kronos', 1100, 80, 35, 30, magic, {})
+E3 = character('Kronos', 5000, 80, 30, 50, magic, {})
+
+Enemies = [E1, E2, E3]
+
+
+def choose_target(opp_team = Enemies):
+    '''
+    Prints a list of opponents you can attack.
+    Choose one of them. Default list is Enemies.
+    '''
+    for i in range(len(opp_team)):
+        print(f'{i+1}. {opp_team[i].name}' )
+
+    target = opp_team[int(input('Choose your target:')) - 1]
+
+    return target
 
 print(bcolors.FAIL + bcolors.BOLD +
-     'ENEMY ATTACKS!!!' + bcolors.ENDC)
-i = 0
-running = True  # Run condition
+      '\nYou are being ATTACKED!!!' + bcolors.ENDC)
 
-while running:
-    print('==============================\n')
+i = 0
+
+while True:
+
+    print('='*68 + '\n')
+
+    print('Name' + ' '*17 + 'HP' + ' '*29 + 'MP')
+
+    for char in Players:
+        char.Info()
+
+    print('\nENEMY:')
+    for Enemy in Enemies:
+        Enemy.Info(bcolors.FAIL)
+
+    Player = Players[i]  # Players acc. to turns
+    i = (i + 1) % len(Players)
+
+    Enemy = random.choice(Enemies)  # Randomly chooses Enemy
 
 # Choosing attack method
     Player.action_list()
-    choice = int(input('Choose an action: '))
+    choice = int(input(f'\n{Player.name},\nChoose an action: '))
 
 # If we choose to attack Melee, or if there isn't enough MP
-    if choice == 1 or Player.get_mp() == 0:
-        print('You chose ATTACK')
+    if choice == 1:
+
+        print('\n'+ Player.name,'chose ATTACK')
         dmg = Player.generate_dmg()
-        # Decreases Enemy HP
-        Enemy.take_dmg(dmg)
+
+        choose_target().take_dmg(dmg)
 
 # When we choose Magic
     elif choice == 2:
-        print('You chose MAGIC')
-    # Choosing the right spell
+
         Player.spells_list()
-        choice = int(input("Choose a spell: ")) - 1
+        choice = int(input("\nChoose a spell: ")) - 1
+
         Spell = magic[choice]
-        print("You chose",bcolors.OKGREEN + bcolors.BOLD +
-              Spell.name + bcolors.ENDC)
-        cost = Spell.get_cost()
-        # If MP is less than cost of spell:
-        if Player.get_mp() < cost :
+
+        print(Player.name,'chose', bcolors.OKGREEN +
+              bcolors.BOLD + Spell.name + bcolors.ENDC)
+
+        # Restart if MP is less than cost of spell.
+        if Player.mp < Spell.cost:
             print(bcolors.WARNING + bcolors.BOLD +
-                'NOT ENOUGH MP' + bcolors.ENDC)
-            continue  # Restarts the loop w/o any damage
-        # Reduces our MP by the spell cost
-        Player.reduce_mp(cost)
-        # Does damage to the Enemy
-        magic_dmg = Spell.generate_dmg()
-        Enemy.take_dmg(magic_dmg)
+                  'Not Enough MP' + bcolors.ENDC)
+            continue
 
-# Prints Enemy HP after attack
-    print('ENEMY HP:', Enemy.get_hp(), '/', Enemy.get_max_hp())
+        Player.reduce_mp(Spell.cost)
+        dmg = Spell.generate_dmg()
 
-# If Enemy has enough MP
-    if Enemy.get_mp() >0:
-        # Chooses between the 2 options
-        Enemychoice = random.randint(1,2)
-    else:
-        Enemychoice = 1
-# When Enemy chooses Attack
+        choose_target().take_dmg(dmg)
+
+    elif choice == 3:
+
+        Player.items_list()
+
+        choice = int(input('\nChoose an item: ')) - 1
+
+        if choice not in range(items_num):
+            print("INVALID CHOICE")
+            continue
+
+        # If choice is a Weapon
+        if choice < weapons_num:
+
+            item = Items['Weapons'][choice]
+
+            if item.count == 0:
+                print('ITEM NOT AVAILABLE')
+                continue
+
+            else:
+                choose_target().take_dmg(item.get_stat())
+
+        # If choice is a Potion
+        else:
+
+            item = Items['Potions'][choice - weapons_num]
+
+            if item.count == 0:
+                print('ITEM NOT AVAILABLE')
+                continue
+
+            Player.heal(item.get_stat())
+
+            if item == Medkit:
+                continue  # Prevents Enemy from attacking
+
+        print('\n'+ Player.name, ' chose', item.name + '\n')
+
+
+    Enemychoice = random.randint(1, 2)
+
+
+# Enemy chooses Attack
     if Enemychoice == 1:
         dmg = Enemy.generate_dmg()
-        # Decreases Player HP
-        Player.take_dmg(dmg)
+
 
 # Enemy chooses Magic
     else:
-        # Chooses a spell at random
-        Spell = magic[random.randint(0,2)]
-        if Spell.get_cost() <= Enemy.get_mp():
-            dmg = Spell.generate_dmg()
+
+        Spell = random.choice(magic)
+        # IF MP is not available
+        if Spell.cost > Enemy.mp:
+            dmg = Enemy.generate_dmg()  # Normal Attack
+
         else:
-            dmg = Enemy.generate_dmg()
-        # Decreases Player HP
-        Player.take_dmg(dmg)
+            dmg = Spell.generate_dmg()
+            Enemy.reduce_mp(Spell.cost)
 
-    print('YOU WERE ATTACKED!!'  + bcolors.FAIL + bcolors.BOLD,
-          dmg,'HP LOST !' + bcolors.ENDC)
+    # Randomly attacks a player
+    target = random.choice(Players)
+    target.take_dmg(dmg)
 
-# Has a 20% chance of healing
-    if random.randrange(5) == 2:
-        # Randomly heals any value b/w 60 and 80
-        heal = random.randint(50,70)
-        # Increases Player HP
-        Player.heal(heal)
-        print(bcolors.OKGREEN + bcolors.BOLD +
-             'YOU HEALED',heal,'HP!'+ bcolors.ENDC)
+    print(Player.name, 'lost ' + bcolors.FAIL + bcolors.BOLD,
+          dmg, bcolors.ENDC + ' HP !')
 
-# Prints player HP and MP after one round
-    print('PLAYER HP:', bcolors.FAIL + bcolors.BOLD,
-           Player.get_hp(), '/', Player.get_max_hp(), bcolors.ENDC)
-    print('PLAYER MP:', bcolors.OKGREEN + bcolors.BOLD,
-           Player.get_mp(), '/', Player.get_max_mp(), bcolors.ENDC)
 
-# Enemy death ! !
-    if Enemy.get_hp() == 0:
+# IF enemy dies
+    if Enemy.hp == 0:
+
         print(bcolors.OKGREEN + bcolors.BOLD + bcolors.UNDERLINE +
-             '\nVICTORY! ENEMY KILLED!!'+ bcolors.ENDC)
-    # Loop run condition set to False
-        running = False
-        break
+              f'\n' + Enemy.name + ' Dead.\n' + bcolors.ENDC)
+        # Removing Enemy from the list
+        Enemies.remove(Enemy)
+        # If Enemies are all dead / len == 0
+        if not Enemies:
+            print(bcolors.BOLD + bcolors.OKBLUE + '\n'+
+                  '\nENEMIES VANQUISHED!!!\nHEROES for the WIN' + bcolors.ENDC)
+
+            break
 
 # Player dies
-    elif Player.get_hp() == 0:
-        print(bcolors.FAIL + bcolors.BOLD +
-             '\nYOU DIED!!\nBETTERLUCK NEXT TIME' + bcolors.ENDC)
-    # Loop run condition set to False
-        running = False
-        break
+    elif Player.hp == 0:
+
+        print('\n'+ Player.name + ' was '+
+              bcolors.FAIL + bcolors.BOLD + 'KILLED!!\n' + bcolors.ENDC)
+
+        Players.remove(Player)
+        # If all players are dead.
+        if not Players:
+            print('\nAll Players are DEAD.\nBetter luck Next time.')
+
+            break
+
 
 # Prints a warning when Player is close to death
-    elif Player.get_hp() <= 150:
+    elif Player.hp <= 150:
+
         print(bcolors.WARNING + bcolors.BOLD +
-             'WARNING!! YOUR HP is GETTING LOW'+ bcolors.ENDC)
+              'WARNING!! ' + Player.name +'\'s HP is getting low'
+              + bcolors.ENDC)
